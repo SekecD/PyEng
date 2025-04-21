@@ -4,6 +4,7 @@ import game_modes
 import core
 import data
 from data import AnyWordList
+from core import DailyStats
 
 class DictionarySelection(NamedTuple):
     word_list: Optional[AnyWordList]
@@ -15,7 +16,23 @@ def display_mode_menu():
     print("  1. Подряд (Англ -> формы/перевод)")
     print("  2. Умное повторение (Рус -> формы/слово)")
     print("  3. Случайно (Рус -> формы/слово)")
+    print("  4. Статистика за сегодня")
     print("  0. Выход")
+
+
+def display_stats(stats: DailyStats):
+    print("\n--- Статистика за сегодня ---")
+    if stats.sessions == 0:
+        print("  Сегодня еще не было тренировок.")
+    else:
+        print(f"  Тренировок запущено: {stats.sessions}")
+        print(f"  Всего слов проверено: {stats.total_words}")
+        print(f"  Правильных ответов: {stats.correct}")
+        print(f"  Ошибок: {stats.incorrect}")
+        minutes, seconds = divmod(int(stats.total_time_sec), 60)
+        time_str = f"{minutes} мин {seconds} сек" if minutes > 0 else f"{seconds} сек"
+        print(f"  Затрачено времени: {time_str} ({stats.total_time_sec:.2f} сек)")
+    print("---------------------------")
 
 def select_mode() -> int:
     while True:
@@ -23,7 +40,7 @@ def select_mode() -> int:
         choice_str = core.ask_user("Выберите номер режима")
         try:
             choice = int(choice_str)
-            if 0 <= choice <= 3:
+            if 0 <= choice <= 4:
                 return choice
             else:
                 print("! Неверный номер режима.")
@@ -65,10 +82,32 @@ def main():
     }
 
     while True:
+
         selected_mode = select_mode()
         if selected_mode == 0:
             print("Завершение работы.")
             sys.exit(0)
+
+        elif selected_mode == 4:
+            today_stats = core.get_daily_stats()
+            display_stats(today_stats)
+            core.ask_user("\nНажмите Enter для возврата в меню...")
+            continue
+        else:
+            selection = select_dictionary()
+            if selection.word_list is None:
+                continue
+
+            runner_func = mode_runners.get(selected_mode)
+            if runner_func:
+                try:
+                    runner_func(selection.word_list, selection.list_name, selection.list_type)
+                except Exception as e:
+                    print(f"\n[Критическая ошибка] Во время выполнения режима: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"! Ошибка: не найдена функция для режима {selected_mode}.")
 
         selection = select_dictionary()
 

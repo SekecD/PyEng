@@ -29,9 +29,19 @@ WORDS: WordPairList = [
 ]
 
 ADJECTIVES: WordPairList = [
-    WordPairItem(eng="happy", rus="счастливый"),
-    WordPairItem(eng="sad", rus="грустный"),
-    WordPairItem(eng="brave", rus="смелый"),
+    WordPairItem(eng="grumpy", rus="ворчливый"),
+    WordPairItem(eng="bored", rus="скучно"),
+    WordPairItem(eng="curious", rus="любопытный"),
+    WordPairItem(eng="hopeful", rus="полный надежды"),
+    WordPairItem(eng="embarrassed", rus="смущенный"),
+    #WordPairItem(eng="disappointed", rus="расстроенный"),
+    WordPairItem(eng="guilty", rus="виноватый"),
+    #WordPairItem(eng="grateful", rus="благодарный"),
+    #WordPairItem(eng="annoyed", rus="раздраженный"),
+    #WordPairItem(eng="ashamed of", rus="устыженный"),
+    #WordPairItem(eng="eager", rus="готов с удовольствием"),
+    WordPairItem(eng="joyful", rus="радостный"),
+    #WordPairItem(eng="confident", rus="уверенный в себе"),
 ]
 
 DICTIONARIES: dict[str, AnyWordList] = {

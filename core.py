@@ -2,11 +2,19 @@ import time
 import csv
 import os
 import random
-from typing import Dict, Any, Union, List
+from typing import Dict, Any, Union, List, NamedTuple, Optional
+from datetime import datetime
 
 import config as cfg
-from data import VerbItem, WordPairItem, AnyWordList
+from data import VerbItem, WordPairItem, VerbList, WordPairList, AnyWordList
 
+
+class DailyStats(NamedTuple):
+    total_words: int = 0
+    correct: int = 0
+    incorrect: int = 0
+    total_time_sec: float = 0.0
+    sessions: int = 0
 
 def ask_user(prompt: str) -> str:
     return input(f"{prompt}: ").strip()
@@ -96,6 +104,7 @@ def save_result(result_data: Dict[str, Any]):
             writer = csv.DictWriter(csvfile, fieldnames=cfg.CSV_HEADERS, extrasaction='ignore')
             if not file_exists or os.path.getsize(cfg.RESULTS_FILENAME) == 0:
                 writer.writeheader()
+                row_to_write = {field: result_data.get(field, '') for field in cfg.CSV_HEADERS}
             writer.writerow(result_data)
     except IOError as e:
         print(f"{e}")
@@ -164,3 +173,71 @@ class SpacedRepetitionTracker:
             self.word_states[key]["score"] = score + increment
         else:
             print(f"[Предупреждение] Попытка обновить score для неизвестного ключа: {key}")
+
+def get_daily_stats() -> DailyStats:
+    today_date_str = datetime.now().strftime("%Y-%m-%d")
+    stats = DailyStats()
+
+    if not os.path.isfile(cfg.RESULTS_FILENAME):
+        return stats
+
+    try:
+        with open(cfg.RESULTS_FILENAME, 'r', newline='', encoding=cfg.RESULTS_ENCODING) as csvfile:
+            first_char = csvfile.read(1)
+            if not first_char:
+                return stats
+            csvfile.seek(0)
+
+            reader = csv.DictReader(csvfile)
+            if not reader.fieldnames or not all(h in reader.fieldnames for h in ['Timestamp', 'Total', 'Correct', 'Incorrect', 'TimeSec']):
+                 print("Неверный формат заголовков в файле статистики.")
+                 return stats
+
+            total_words = 0
+            correct = 0
+            incorrect = 0
+            total_time = 0.0
+            sessions = 0
+
+            for i, row in enumerate(reader):
+                try:
+                    required_keys = ['Timestamp', 'Total', 'Correct', 'Incorrect', 'TimeSec']
+                    if not all(key in row for key in required_keys):
+                        print(f"[Предупреждение] Пропуск строки {i+2}: отсутствуют необходимые поля.")
+                        continue
+
+                    timestamp_str = row.get('Timestamp', '')
+                    row_date_str = timestamp_str.split(' ')[0]
+
+                    if row_date_str == today_date_str:
+                        words = int(row.get('Total', 0))
+                        cr = int(row.get('Correct', 0))
+                        inc = int(row.get('Incorrect', 0))
+                        time_val = float(row.get('TimeSec', 0.0))
+
+                        total_words += words
+                        correct += cr
+                        incorrect += inc
+                        total_time += time_val
+                        sessions += 1
+
+                except ValueError as e:
+                    print(f"[Предупреждение] Пропуск строки {i+2} из-за ошибки конвертации данных: {e}")
+                except Exception as e:
+                     print(f"[Предупреждение] Пропуск строки {i+2} из-за непредвиденной ошибки: {e}")
+
+
+            stats = DailyStats(
+                total_words=total_words,
+                correct=correct,
+                incorrect=incorrect,
+                total_time_sec=total_time,
+                sessions=sessions
+            )
+
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print(f"Не удалось прочитать файл статистики: {e}")
+
+    return stats
